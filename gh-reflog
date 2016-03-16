@@ -90,4 +90,9 @@ def gh_reflog(repo, ref):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print('Usage: {} <repo> <branch>'.format(sys.argv[0]))
+        print('Example: {} hyperair/gh-reflog master'.format(sys.argv[0]))
+        exit(2)
+
     gh_reflog(sys.argv[1], sys.argv[2])
