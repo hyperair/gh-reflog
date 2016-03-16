@@ -28,10 +28,10 @@ def get_gh_auth():
     os.environ.setdefault("GPG_AGENT_INFO", gpg_agent_info)
     username = subprocess.check_output([
         'git', 'config', '--get', 'github.user'
-    ]).strip()
+    ]).strip().decode("utf8")
     token = subprocess.check_output([
         'gpg', '--decrypt', os.path.expanduser('~/.github-token.gpg')
-    ]).strip()
+    ]).strip().decode("utf8")
 
     return (username, token)
 
