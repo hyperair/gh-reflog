@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+
+from dateutil.parser import parser as dparser
+import json
+import os
+import re
+import requests
+import subprocess
+import sys
+
+
+dparser = dparser()
+
+
+class GithubException(Exception):
+    pass
+
+
+def get_gh_auth():
+    """
+    Gets github authentication tuple
+
+    @returns (username, token)
+    """
+    with open(os.path.expanduser('~/.gpg-agent-info')) as f:
+        gpg_agent_info = f.read().strip()
+
+    os.environ.setdefault("GPG_AGENT_INFO", gpg_agent_info)
+    username = subprocess.check_output([
+        'git', 'config', '--get', 'github.user'
+    ]).strip()
+    token = subprocess.check_output([
+        'gpg', '--decrypt', os.path.expanduser('~/.github-token.gpg')
+    ]).strip()
+
+    return (username, token)
+
+def parse_link_header(link):
+    retval = {}
+    linkre = re.compile(r'^<(?P<url>[^>]+)>; rel="(?P<rel>[^"]+)"$')
+
+    for item in link.split(', '):
+        match = linkre.match(item)
+        data = match.groupdict()
+        retval[data['rel']] = data['url']
+
+    return retval
+
+def gh_events(repo):
+    """
+    Generates full list of events from repo
+
+    @param repo Repository path in github, in <user>/<reponame> format.
+    """
+    events_url = 'https://api.github.com/repos/{}/events'.format(repo)
+    session = requests.session()
+    auth = get_gh_auth()
+
+    while True:
+        response = session.get(events_url, verify=True, auth=auth)
+
+        if response.status_code != 200:
+            raise GithubException(response.json())
+
+        for i in response.json():
+            yield i
+
+        try:
+            events_url = parse_link_header(response.headers['link'])['next']
+
+        except KeyError:
+            break               # no "next" link.
+
+def gh_reflog(repo, ref):
+    events = gh_events(repo)
+    relevant_push_events = (e for e in events
+                            if e['type'] == 'PushEvent'
+                            and e['payload']['ref'] == 'refs/heads/' + ref)
+
+    def event_date(pe):
+        return dparser.parse(pe['created_at'])
+
+    for e in sorted(relevant_push_events, key=event_date, reverse=True):
+        payload = e['payload']
+        print('{hash:<5}  {author:<30}  {date}'.format(
+            hash=payload['head'],
+            author=e['actor']['login'],
+            date=event_date(e)))
+
+
+if __name__ == '__main__':
+    gh_reflog(sys.argv[1], sys.argv[2])
