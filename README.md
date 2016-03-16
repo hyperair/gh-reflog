@@ -2,7 +2,7 @@
 ## Introduction
 
 `gh-reflog` is the equivalent of `git reflog` for Github. Useful for those silly
-moments whne you accidentally force-push on top of something and need to recover
+moments when you accidentally force-push on top of something and need to recover
 history.
 
 ## Installation
