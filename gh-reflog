@@ -36,6 +36,11 @@ def get_gh_auth():
     return (username, token)
 
 def parse_link_header(link):
+    """
+    Parses a Github Link: HTTP header into dict
+
+    @returns dict of rel -> url
+    """
     retval = {}
     linkre = re.compile(r'^<(?P<url>[^>]+)>; rel="(?P<rel>[^"]+)"$')
 
